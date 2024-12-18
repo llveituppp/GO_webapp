@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            width: 300px;
+            margin: auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .message {
+            color: red;
+            font-size: 14px;
+        }
+        .success {
+            color: green;
+        }
+        .product-list {
+            margin-top: 20px;
+        }
+        .product-item {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Регистрация</h2>
+    <div id="register-message" class="message"></div>
+    <div class="form-group">
+        <input type="email" id="register-email" placeholder="Email" required>
+    </div>
+    <div class="form-group">
+        <input type="password" id="register-password" placeholder="Пароль" required>
+    </div>
+    <button onclick="registerUser()">Зарегистрироваться</button>
+
+    <h2>Вход</h2>
+    <div id="login-message" class="message"></div>
+    <div class="form-group">
+        <input type="email" id="login-email" placeholder="Email" required>
+    </div>
+    <div class="form-group">
+        <input type="password" id="login-password" placeholder="Пароль" required>
+    </div>
+    <button onclick="loginUser()">Войти</button>
+
+    <h2>Список товаров</h2>
+    <button onclick="getProducts()">Получить товары</button>
+    <div id="products-list" class="product-list"></div>
+
+    <h2>Покупка товара</h2>
+    <div id="purchase-message" class="message"></div>
+    <div class="form-group">
+        <input type="number" id="purchase-product-id" placeholder="ID товара" required>
+    </div>
+    <div class="form-group">
+        <input type="number" id="purchase-quantity" placeholder="Количество" required>
+    </div>
+    <button onclick="purchaseProduct()">Купить товар</button>
+
+    <h2>Защищённый маршрут</h2>
+    <button onclick="getProtectedData()">Получить доступ</button>
+    <div id="protected-message"></div>
+</div>
+
+<script>
+    const apiUrl = "http://localhost:8000"; // Адрес вашего Go сервера
+    let token = "";
+
+    // Регистрация пользователя
+    function registerUser() {
+        const email = document.getElementById("register-email").value;
+        const password = document.getElementById("register-password").value;
+        const messageElement = document.getElementById("register-message");
+
+        if (!email || !password) {
+            messageElement.textContent = "Пожалуйста, заполните все поля.";
+            return;
+        }
+
+        fetch(`${apiUrl}/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    messageElement.textContent = data.message;
+                    messageElement.classList.add("success");
+                } else {
+                    messageElement.textContent = data.error || "Ошибка регистрации.";
+                }
+            })
+            .catch(error => {
+                messageElement.textContent = "Ошибка связи с сервером.";
+            });
+    }
+
+    // Вход пользователя
+    function loginUser() {
+        const email = document.getElementById("login-email").value;
+        const password = document.getElementById("login-password").value;
+        const messageElement = document.getElementById("login-message");
+
+        if (!email || !password) {
+            messageElement.textContent = "Пожалуйста, заполните все поля.";
+            return;
+        }
+
+        fetch(`${apiUrl}/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.token) {
+                    token = data.token;
+                    messageElement.textContent = "Успешный вход!";
+                    messageElement.classList.remove("error");
+                    messageElement.classList.add("success");
+                } else {
+                    messageElement.textContent = data.error || "Ошибка входа.";
+                    messageElement.classList.remove("success");
+                    messageElement.classList.add("error");
+                }
+            })
+            .catch(error => {
+                messageElement.textContent = "Ошибка связи с сервером.";
+            });
+    }
+
+    // Доступ к защищённому маршруту
+    function getProtectedData() {
+        const messageElement = document.getElementById("protected-message");
+
+        if (!token) {
+            messageElement.textContent = "Пожалуйста, войдите, чтобы получить доступ.";
+            return;
+        }
+
+        fetch(`${apiUrl}/protected/example`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                messageElement.textContent = data.message || data.error;
+            })
+            .catch(error => {
+                messageElement.textContent = "Ошибка доступа к защищённому маршруту.";
+            });
+    }
+
+    // Получить список товаров
+    function getProducts() {
+        const messageElement = document.getElementById("products-list");
+
+        if (!token) {
+            messageElement.textContent = "Пожалуйста, войдите, чтобы получить товары.";
+            return;
+        }
+
+        fetch(`${apiUrl}/products`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    const productList = data.map(product => `
+                        <div class="product-item">
+                            <h4>${product.name}</h4>
+                            <p>Цена: $${product.price}</p>
+                            <p>Количество: ${product.quantity}</p>
+                        </div>
+                    `).join('');
+                    messageElement.innerHTML = productList;
+                } else {
+                    messageElement.textContent = "Ошибка получения товаров.";
+                }
+            })
+            .catch(error => {
+                messageElement.textContent = "Ошибка связи с сервером.";
+            });
+    }
+
+    // Покупка товара
+    function purchaseProduct() {
+        const productId = document.getElementById("purchase-product-id").value;
+        const quantity = document.getElementById("purchase-quantity").value;
+        const messageElement = document.getElementById("purchase-message");
+
+        if (!token) {
+            messageElement.textContent = "Пожалуйста, войдите, чтобы совершить покупку.";
+            return;
+        }
+
+        if (!productId || !quantity || quantity <= 0) {
+            messageElement.textContent = "Пожалуйста, введите корректные данные.";
+            return;
+        }
+
+        fetch(`${apiUrl}/purchase`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                product_id: parseInt(productId),
+                quantity: parseInt(quantity)
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    messageElement.textContent = data.message;
+                    messageElement.classList.add("success");
+                    messageElement.classList.remove("error");
+                } else {
+                    messageElement.textContent = data.error || "Ошибка покупки.";
+                    messageElement.classList.add("error");
+                    messageElement.classList.remove("success");
+                }
+            })
+            .catch(error => {
+                messageElement.textContent = "Ошибка связи с сервером.";
+                messageElement.classList.add("error");
+                messageElement.classList.remove("success");
+            });
+    }
+</script>
+</body>
+</html>
